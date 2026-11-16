@@ -1,0 +1,418 @@
+{
+  "version": "2.2.0",
+  "summary": {
+    "title": "Modelo de Amenazas - Financiadora Virtual E Credit",
+    "owner": "Equipo E Credit",
+    "description": "Modelo STRIDE para autenticación, solicitud y evaluación de créditos de bajo monto (Java, Node.js, SQL Server).",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [
+      { "name": "Dawian Stiven Arce Velásquez" }
+    ],
+    "diagrams": [
+      {
+        "id": 0,
+        "title": "DFD - Originación y Evaluación de Crédito",
+        "diagramType": "STRIDE",
+        "placeholder": "Flujo principal de solicitud y aprobación de crédito",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.2.0",
+        "cells": [
+          {
+            "position": { "x": 60, "y": 140 },
+            "size": { "width": 160, "height": 80 },
+            "angle": 0,
+            "shape": "actor",
+            "id": "actor-cliente",
+            "zIndex": 1,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Cliente Solicitante",
+              "description": "Usuario que registra datos personales, referencias y solicita crédito.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "providesAuthentication": false,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-01",
+                  "title": "Suplantación de identidad en registro y solicitud (S)",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Spoofing",
+                  "description": "Un tercero usa datos de cédula filtrados para crear una cuenta y solicitar un crédito a nombre de otra persona sin verificación de identidad robusta.",
+                  "mitigation": "Implementar validación OTP por correo/SMS y verificación de titularidad antes de habilitar el cupo.",
+                  "modelType": "STRIDE",
+                  "number": 1,
+                  "score": "4"
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 60, "y": 380 },
+            "size": { "width": 160, "height": 80 },
+            "angle": 0,
+            "shape": "actor",
+            "id": "actor-analista",
+            "zIndex": 2,
+            "data": {
+              "type": "tm.Actor",
+              "name": "Analista / Administrador",
+              "description": "Personal interno que revisa, aprueba o rechaza solicitudes.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "providesAuthentication": true,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-02",
+                  "title": "Repudio en aprobación manual de créditos (R)",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Repudiation",
+                  "description": "Un analista aprueba un crédito fraudulento o altera su estado y niega la acción por falta de logs inmutables con usuario, IP y marca de tiempo.",
+                  "mitigation": "Registrar eventos de auditoría append-only en SQL Server con ID de analista, timestamp UTC e IP origen.",
+                  "modelType": "STRIDE",
+                  "number": 2,
+                  "score": "4"
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 340, "y": 140 },
+            "size": { "width": 140, "height": 140 },
+            "angle": 0,
+            "shape": "process",
+            "id": "proc-frontend",
+            "zIndex": 3,
+            "data": {
+              "type": "tm.Process",
+              "name": "Frontend / Portal Web",
+              "description": "Interfaz web de captura de solicitudes y consulta de estado.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "privilegeLevel": "Público",
+              "handlesCardPayment": false,
+              "handlesGoodsOrServices": false,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-03",
+                  "title": "Robo de sesión JWT vía XSS almacenado (I)",
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Information Disclosure",
+                  "description": "Inyección de script en campos de referencias personales que extrae el token JWT guardado en localStorage.",
+                  "mitigation": "Almacenar tokens en cookies HttpOnly + Secure + SameSite=Strict y sanitizar salidas en el DOM.",
+                  "modelType": "STRIDE",
+                  "number": 3,
+                  "score": "3"
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 600, "y": 250 },
+            "size": { "width": 140, "height": 140 },
+            "angle": 0,
+            "shape": "process",
+            "id": "proc-api-node",
+            "zIndex": 4,
+            "data": {
+              "type": "tm.Process",
+              "name": "Backend API (Node.js)",
+              "description": "API REST para autenticación JWT, validaciones y control de acceso.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "privilegeLevel": "Servicio Backend",
+              "handlesCardPayment": false,
+              "handlesGoodsOrServices": false,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-04",
+                  "title": "IDOR en consulta de solicitudes de crédito (I)",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Information Disclosure",
+                  "description": "Un cliente autenticado altera el parámetro ID en GET /api/solicitudes/{id} y accede a cédula, ingresos y referencias de otros clientes.",
+                  "mitigation": "Validar propiedad del recurso comparando el user_id del JWT contra el titular en SQL Server; devolver 404 si no coincide.",
+                  "modelType": "STRIDE",
+                  "number": 4,
+                  "score": "9"
+                },
+                {
+                  "id": "t-05",
+                  "title": "Elevación de privilegios por Mass Assignment (E)",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Elevation of Privilege",
+                  "description": "Un usuario envía el atributo 'rol: ADMIN' en el JSON de registro o actualización de perfil y obtiene permisos de aprobador.",
+                  "mitigation": "Filtrar campos permitidos mediante DTO estrictos (allowlist) ignorando atributos de rol o estado.",
+                  "modelType": "STRIDE",
+                  "number": 5,
+                  "score": "8"
+                },
+                {
+                  "id": "t-06",
+                  "title": "Agotamiento de servicio por falta de Rate Limiting (D)",
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Denial of Service",
+                  "description": "Peticiones automatizadas masivas a /api/login y /api/evaluar saturan el event loop de Node.js y el pool de SQL Server.",
+                  "mitigation": "Aplicar rate limiting de máximo 10 req/min por IP/usuario y paginación obligatoria en consultas.",
+                  "modelType": "STRIDE",
+                  "number": 6,
+                  "score": "6"
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 860, "y": 140 },
+            "size": { "width": 140, "height": 140 },
+            "angle": 0,
+            "shape": "process",
+            "id": "proc-core-java",
+            "zIndex": 5,
+            "data": {
+              "type": "tm.Process",
+              "name": "Motor de Crédito (Java)",
+              "description": "Lógica de negocio, cálculo de cupo, tasas y aprobación.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "privilegeLevel": "Core Financiero",
+              "handlesCardPayment": false,
+              "handlesGoodsOrServices": true,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-07",
+                  "title": "Lógica de Negocio: Duplicación de cupo por Race Condition (T)",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "Un solicitante envía múltiples peticiones simultáneas de aprobación en milisegundos antes de actualizar su saldo comprometido, obteniendo doble desembolso.",
+                  "mitigation": "Ejecutar validación de cupo y descuento bajo transacción SQL con bloqueo pesimista (UPDLOCK/SERIALIZABLE).",
+                  "modelType": "STRIDE",
+                  "number": 7,
+                  "score": "9"
+                },
+                {
+                  "id": "t-08",
+                  "title": "Manipulación de monto y tasa calculada desde cliente (T)",
+                  "status": "Open",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "description": "El atacante intercepta el payload HTTP y modifica el monto aprobado o tasa de interés confiando en cálculos enviados desde el frontend.",
+                  "mitigation": "Recalcular montos máximos, plazos y tasas exclusivamente en el servicio Java ignorando valores enviados por el cliente.",
+                  "modelType": "STRIDE",
+                  "number": 8,
+                  "score": "6"
+                }
+              ]
+            }
+          },
+          {
+            "position": { "x": 850, "y": 400 },
+            "size": { "width": 160, "height": 80 },
+            "angle": 0,
+            "shape": "store",
+            "id": "store-sqlserver",
+            "zIndex": 6,
+            "data": {
+              "type": "tm.Store",
+              "name": "BD Principal (SQL Server)",
+              "description": "Almacena usuarios, credenciales, solicitudes y referencias.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "isALog": false,
+              "storesCredentials": true,
+              "isEncrypted": true,
+              "isSigned": false,
+              "storesInventory": false,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-09",
+                  "title": "Inyección SQL en búsqueda de solicitudes (T)",
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Tampering",
+                  "description": "Concatenación de filtros de cédula o estado en consultas dinámicas hacia SQL Server.",
+                  "mitigation": "Usar exclusivamente PreparedStatement en Java y consultas parametrizadas en Node.js.",
+                  "modelType": "STRIDE",
+                  "number": 9,
+                  "score": "3"
+                }
+              ]
+            }
+          },
+          {
+            "shape": "trust-boundary-box",
+            "position": { "x": 290, "y": 80 },
+            "size": { "width": 760, "height": 450 },
+            "angle": 0,
+            "id": "tb-red-interna",
+            "zIndex": 0,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "Límite de Confianza: Internet -> Infraestructura E Credit"
+            }
+          },
+          {
+            "shape": "trust-boundary-box",
+            "position": { "x": 810, "y": 350 },
+            "size": { "width": 230, "height": 160 },
+            "angle": 0,
+            "id": "tb-datos",
+            "zIndex": 0,
+            "data": {
+              "type": "tm.BoundaryBox",
+              "name": "Límite de Confianza: Capa de Datos"
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-1",
+            "zIndex": 10,
+            "source": { "cell": "actor-cliente" },
+            "target": { "cell": "proc-frontend" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "1. Solicitud (HTTPS)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "1. Solicitud y Datos Personales",
+              "description": "Envío de formulario de registro, cédula y referencias.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-2",
+            "zIndex": 11,
+            "source": { "cell": "proc-frontend" },
+            "target": { "cell": "proc-api-node" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "2. API REST + JWT (HTTPS)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "2. Peticiones API REST + JWT",
+              "description": "Payload JSON autenticado.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-3",
+            "zIndex": 12,
+            "source": { "cell": "actor-analista" },
+            "target": { "cell": "proc-api-node" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "3. Aprobación (HTTPS)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "3. Aprobación / Rechazo",
+              "description": "Cambio de estado ejecutado por analista.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTPS",
+              "isEncrypted": true,
+              "isPublicNetwork": true,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-4",
+            "zIndex": 13,
+            "source": { "cell": "proc-api-node" },
+            "target": { "cell": "proc-core-java" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "4. Evaluación (HTTP)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "4. Evaluación Crediticia",
+              "description": "Comunicación interna Node.js hacia Java.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "HTTP",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "hasOpenThreats": true,
+              "threats": [
+                {
+                  "id": "t-10",
+                  "title": "Suplantación de servicio interno sin mTLS/API Key (S)",
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Spoofing",
+                  "description": "El endpoint interno del motor Java acepta peticiones HTTP sin autenticar que provienen exclusivamente del API Gateway Node.js.",
+                  "mitigation": "Restringir red interna de contenedores y exigir cabecera firmada o mTLS entre Node.js y Java.",
+                  "modelType": "STRIDE",
+                  "number": 10,
+                  "score": "2"
+                }
+              ]
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-5",
+            "zIndex": 14,
+            "source": { "cell": "proc-core-java" },
+            "target": { "cell": "store-sqlserver" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "5. Créditos (TDS/TLS)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "5. Lectura/Escritura Créditos",
+              "description": "Consultas SQL de cupos y desembolsos.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "TDS",
+              "isEncrypted": true,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "shape": "flow",
+            "id": "flow-6",
+            "zIndex": 15,
+            "source": { "cell": "proc-api-node" },
+            "target": { "cell": "store-sqlserver" },
+            "labels": [{ "position": 0.5, "attrs": { "text": { "text": "6. Usuarios/Ref (TDS)" } } }],
+            "data": {
+              "type": "tm.Flow",
+              "name": "6. Validación Usuarios y Referencias",
+              "description": "Consultas de autenticación y referencias.",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "protocol": "TDS",
+              "isEncrypted": true,
+              "isPublicNetwork": false,
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          }
+        ]
+      }
+    ],
+    "diagramTop": 1,
+    "reviewer": "Equipo E Credit",
+    "threatTop": 10
+  }
+}
