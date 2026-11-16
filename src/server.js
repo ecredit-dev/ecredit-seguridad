@@ -63,16 +63,20 @@ app.post('/api/usuarios', (req, res) => {
   );
 });
 
-// 3. Consulta de solicitud por ID (Vulnerable a IDOR / BOLA - Amenaza T1 / t-04)
+// 3. Consulta de solicitud por ID (Protegida contra IDOR / BOLA - ASVS V8.2.1 / Lab 1 T1)
 app.get('/api/solicitudes/:id', autenticar, (req, res) => {
   const solicitudId = req.params.id;
 
-  // Vulnerabilidad: No filtra por req.user.id (cualquier usuario ve cualquier solicitud)
-  db.get(`SELECT * FROM solicitudes WHERE id = ?`, [solicitudId], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Solicitud no encontrada' });
-    res.json(row);
-  });
+  // Filtra estrictamente por el dueño del recurso extraído del token autenticado
+  db.get(
+    `SELECT id, usuario_id, monto, plazo, tasa, estado FROM solicitudes WHERE id = ? AND usuario_id = ?`,
+    [solicitudId, req.user.id],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: 'Error interno del servidor' });
+      if (!row) return res.status(404).json({ error: 'Solicitud no encontrada' });
+      res.json(row);
+    }
+  );
 });
 
 // 4. Crear y evaluar solicitud de crédito (Vulnerable a Manipulación de tasa/monto T4 y Race Condition T2)
