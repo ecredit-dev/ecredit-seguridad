@@ -1,0 +1,15 @@
+{
+  "name": "ecredit-api",
+  "version": "1.0.0",
+  "description": "API de originación y evaluación de créditos - Financiadora Virtual E Credit",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7"
+  }
+}
