@@ -1,0 +1,6 @@
+# Triage de Hallazgos SAST (Semgrep) y DAST (OWASP ZAP)
+
+| Regla / Alerta | Archivo:línea (o Endpoint) | ¿Verdadero o falso positivo? | Por qué | Fila ASVS relacionada |
+|---|---|---|---|---|
+| `javascript.jsonwebtoken.security.jwt-hardcode.hardcoded-jwt-secret` (Semgrep) | `src/server.js:43` | Verdadero positivo | La constante `JWT_SECRET` (`clave_secreta_ecredit_123`) está quemada en el código fuente y se pasa directamente a `jwt.sign()`, exponiendo la llave de firma de tokens ante cualquier acceso al repositorio. | Fila 17 (V11 / V13) |
+| `CSP: Failure to Define Directive with No Fallback` — Risk: Medium (OWASP ZAP) | `GET http://host.docker.internal:4000/` (`/api`, `/robots.txt`, `/sitemap.xml`) | Falso positivo (en contexto de API REST) / Mejora de endurecimiento | Express emite `Content-Security-Policy: default-src 'none'` en respuestas de error `404 Not Found` sin incluir `frame-ancestors 'none'` ni `form-action 'none'` (que no heredan de `default-src`). Aunque es una API JSON sin vistas HTML, endurecer la cabecera en respuestas 404 elimina el riesgo en navegadores. | Fila 19 (V13 Configuración) |
