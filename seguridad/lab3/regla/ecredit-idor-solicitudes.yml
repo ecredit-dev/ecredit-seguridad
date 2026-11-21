@@ -1,0 +1,21 @@
+rules:
+  - id: ecredit-asvs-v8-2-1-idor-solicitudes
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Posible IDOR (ASVS V8.2.1 / Lab 1 T1): Consulta sobre la tabla 'solicitudes'
+      filtrando por 'id' sin restringir por 'usuario_id'. Verifica la propiedad del recurso.
+    metadata:
+      asvs: "V8.2.1"
+      threat: "Lab 1 - T1 (IDOR en solicitudes)"
+    patterns:
+      - pattern-either:
+          - pattern: $DB.get($SQL, ...)
+          - pattern: $DB.all($SQL, ...)
+          - pattern: $DB.prepare($SQL)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?i).*select\s+.*\s+from\s+solicitudes\s+where\s+id\s*=.*
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?i)^((?!usuario_id).)*$
