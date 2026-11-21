@@ -109,6 +109,14 @@ app.get('/api/solicitudes', autenticar, (req, res) => {
     res.json(rows);
   });
 });
+// Endpoint temporal para demo de Auditgate (falla intencional: Command Injection)
+const { exec } = require('child_process');
+
+app.get('/api/debug/ping', (req, res) => {
+  exec('ping -c 1 ' + req.query.host, (err, stdout) => {
+    res.send(stdout);
+  });
+});
 
 const PORT = process.env.PORT || 4000;
 if (require.main === module) {
